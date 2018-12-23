@@ -24,11 +24,12 @@ import (
 )
 
 var opts struct {
-	Verbose   bool   `short:"v" long:"verbose" description:"Show verbose debug information"`
-	CalPath   string `short:"p" long:"path" description:"Path to calendar folder" required:"true"`
-	EmailFile string `short:"f" long:"email-file" description:"Path to email file" required:"true"`
-	Type      string `short:"t" long:"type" description:"Message mime type" default:"text/plain"`
-	HtmlCmd   string `short:"h" long:"html-cmd" description:"Html parse command" default:"w3m -T text/html %s"`
+	Verbose    bool   `short:"v" long:"verbose" description:"Show verbose debug information"`
+	CalPath    string `short:"p" long:"path" description:"Path to calendar folder" required:"true"`
+	EmailFile  string `short:"f" long:"email-file" description:"Path to email file" required:"true"`
+	Type       string `short:"t" long:"type" description:"Message mime type" default:"text/plain"`
+	HtmlCmd    string `short:"h" long:"html-cmd" description:"Html parse command" default:"w3m -T text/html %s"`
+	Categories string `short:"c" long:"categories" description:"Categories"`
 }
 
 func debug(message string, params ...interface{}) {
@@ -146,6 +147,7 @@ PRIORITY:0
 SEQUENCE:6
 STATUS:NEEDS-ACTION
 SUMMARY:{{.Summary}}
+CATEGORIES:{{.Categories}}
 UID:{{.Uuid}}
 X-OC-HIDESUBTASKS:0
 END:VTODO
@@ -160,6 +162,7 @@ END:VCALENDAR`
 		"Dtstamp":     date.Format("20060102T150405Z"),
 		"Created":     created.Format("20060102T150405Z"),
 		"Description": description,
+		"Categories":  opts.Categories,
 		"Uuid":        uuid,
 	}
 
