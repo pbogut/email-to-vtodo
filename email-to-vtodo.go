@@ -1,16 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"fmt"
 	"html"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -53,8 +57,13 @@ func html_to_text(html string) string {
 }
 
 func email_file_to_msg(file_path string) *email.Message {
-	file, _ := ioutil.ReadFile(file_path)
-	reader := strings.NewReader(string(file))
+	var reader io.Reader
+	if file_path == "-" {
+		reader = bufio.NewReader(os.Stdin)
+	} else {
+		file, _ := ioutil.ReadFile(file_path)
+		reader = strings.NewReader(string(file))
+	}
 	msg, _ := email.ParseMessage(reader)
 
 	return msg
@@ -158,11 +167,48 @@ END:VCALENDAR`
 	templ, _ := template.New("preview").Parse(icsVtodo)
 	templ.Execute(content, m)
 
-	dir := opts.CalPath
-	fileName := dir + "/" + uuid + ".ics"
+	if opts.CalPath == "-" {
+		fmt.Println(content.String())
+	} else {
+		var selection []map[string]string
+		paths, _ := filepath.Glob(opts.CalPath)
+		for _, calPath := range paths {
+			cal, _ := os.Stat(calPath)
+			if cal.IsDir() {
+				selection = append(selection, map[string]string{
+					"Path": calPath,
+					"Name": filepath.Base(calPath),
+				})
+			}
+		}
 
-	err = ioutil.WriteFile(fileName, content.Bytes(), 0777)
-	if err != nil {
-		log.Fatal("Cannot create todo file.\n", err)
+		dir := opts.CalPath
+
+		if len(selection) > 1 {
+			for i, element := range selection {
+				fmt.Printf("[%d] %s\n", i, element["Name"])
+			}
+
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Select calendar: ")
+			text, _ := reader.ReadString('\n')
+			text = strings.Replace(text, "\n", "", 1)
+			n, _ := strconv.Atoi(text)
+			if text == "" {
+				fmt.Println("No calendar selected")
+				os.Exit(0)
+			}
+			if text != "0" && n == 0 {
+				log.Fatal("Incorrect calendar number ", text, " ", n)
+			}
+			dir = selection[n]["Path"]
+		}
+
+		fileName := dir + "/" + uuid + ".ics"
+
+		err = ioutil.WriteFile(fileName, content.Bytes(), 0777)
+		if err != nil {
+			log.Fatal("Cannot create todo file.\n", err)
+		}
 	}
 }
